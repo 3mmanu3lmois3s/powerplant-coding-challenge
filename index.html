@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Powerplant Production Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'inspiration-blue': '#2563EB',  // A nice blue
+              'inspiration-green': '#10B981', // A nice green
+              'gray-800': '#1F2937',        // For dark text
+              'gray-700': '#374151',        // For slightly lighter dark text
+            }
+          }
+        }
+      }
+    </script>
+    </head>
+<body style="background-image: url('img/eco-background.jpg');" class="bg-cover bg-center bg-fixed text-gray-800 flex flex-col justify-center items-center min-h-screen antialiased p-4 sm:p-6 md:p-8 selection:bg-inspiration-green selection:text-white">
+
+    <div class="relative z-0 bg-white/80 backdrop-blur-md p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl">
+        <header class="mb-8 text-left">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">Powerplant Production Planner</h1>
+        </header>
+
+        <main>
+            <form id="plannerForm" class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mb-6">
+                    <label for="load" class="block text-base font-semibold text-gray-700 sm:w-auto sm:whitespace-nowrap mb-1 sm:mb-0">Load (MWh):</label>
+                    <input type="number" id="load" name="load" value="480" required
+                           class="block w-full sm:flex-grow px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm
+                                  focus:outline-none focus:border-inspiration-blue focus:ring-1 focus:ring-inspiration-blue
+                                  transition duration-150 ease-in-out text-right">
+                </div>
+
+                <div>
+                    <label for="payloadJson" class="block text-base font-semibold text-gray-700 mb-1">JSON Payload (fuels & powerplants):</label>
+                    <textarea id="payloadJson" name="payloadJson" rows="12" required
+                              class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm placeholder-gray-400
+                                     focus:outline-none focus:border-inspiration-blue focus:ring-1 focus:ring-inspiration-blue
+                                     transition duration-150 ease-in-out font-mono text-xs">
+{
+  "fuels": {
+    "gas(euro/MWh)": 13.4,
+    "kerosine(euro/MWh)": 50.8,
+    "co2(euro/ton)": 20,
+    "wind(%)": 60
+  },
+  "powerplants": [
+    {
+      "name": "gasfiredbig1",
+      "type": "gasfired",
+      "efficiency": 0.53,
+      "pmin": 100,
+      "pmax": 460
+    },
+    {
+      "name": "gasfiredbig2",
+      "type": "gasfired",
+      "efficiency": 0.53,
+      "pmin": 100,
+      "pmax": 460
+    },
+    {
+      "name": "gasfiredsomewhatsmaller",
+      "type": "gasfired",
+      "efficiency": 0.37,
+      "pmin": 40,
+      "pmax": 210
+    },
+    {
+      "name": "tj1",
+      "type": "turbojet",
+      "efficiency": 0.3,
+      "pmin": 0,
+      "pmax": 16
+    },
+    {
+      "name": "windpark1",
+      "type": "windturbine",
+      "efficiency": 1,
+      "pmin": 0,
+      "pmax": 150
+    },
+    {
+      "name": "windpark2",
+      "type": "windturbine",
+      "efficiency": 1,
+      "pmin": 0,
+      "pmax": 36
+    }
+  ]
+}
+                    </textarea>
+                    <p class="mt-1 text-xs text-gray-500">Paste the JSON containing 'fuels' and 'powerplants' objects here.</p>
+                </div>
+
+                <div>
+                    <button type="submit" id="calculateBtn"
+                            class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
+                                   bg-gradient-to-r from-inspiration-blue to-inspiration-green hover:opacity-90 
+                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-inspiration-blue
+                                   transition-all duration-150 ease-in-out">
+                        Calculate Production Plan
+                    </button>
+                </div>
+            </form>
+
+            <section id="resultsSection" aria-live="polite" class="mt-8 pt-6 border-t border-gray-200">
+                <h2 class="text-base font-semibold text-gray-700 mb-3">Production Plan Results:</h2>
+                <div id="resultsOutput" class="bg-gray-50/70 backdrop-blur-sm p-4 rounded-md min-h-[50px] text-sm overflow-x-auto">
+                    <p class="text-gray-500">Plan will appear here once calculated.</p>
+                </div>
+            </section>
+        </main>
+
+        <footer class="mt-8 text-center">
+            <p class="text-xs text-gray-500">by emmanuel mellado</p>
+        </footer>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

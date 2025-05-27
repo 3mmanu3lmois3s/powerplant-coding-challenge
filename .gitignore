@@ -1,0 +1,17 @@
+# Python (for your backend folder)
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/venv/
+backend/.venv/
+backend/*.env
+backend/.env.*
+backend/env/
+backend/ENV/
+
+# OS / Editor specific
+.DS_Store
+.vscode/ # If you open the powerplant-coding-challenge folder directly in VS Code
+*.swp
+Thumbs.db
