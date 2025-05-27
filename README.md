@@ -1,3 +1,18 @@
+# About this repository
+
+Is a FORK of powerplant-coding-challenge (  https://github.com/gem-spaas/powerplant-coding-challenge ) originally of IS team within [GEM](https://gems.engie.com/).
+
+# Using the Demo
+
+1.- The present demo use https: github pages to host the demo [Enter here]-> https://3mmanu3lmois3s.github.io/powerplant-coding-challenge/
+2.- Download the project (  https://github.com/3mmanu3lmois3s/powerplant-coding-challenge.git ) and execute the backend ( python app.py ) the FLASK API service in 8888 port https (SSL is mandatory to supper interchange of commms between github page and flask https server - more professional)
+3.- For this demo is mandatory open the first time when you start the flask API in localhost , enter into the browser to this url: https://localhost:8888 and accept de risk security becuase the certify is autosigned, not for a third party CA (certify authority)
+IMPORTANT= This last step is not necesary if you host the API Flask in one certify saas or platform with a valid certificate, but for test in localhost is neccesary the step number 3.  
+
+4. Finally this demo has a fallback option included in javascript code , cloning  python code to reply in case of server down (Api flask down)!! 
+5. Next steps create a Docker image and UP in Kubernate or similar...
+
+
 # powerplant-coding-challenge
 
 
