@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Powerplant Production Planner</title>
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self' https://cdn.tailwindcss.com; 
+                   script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; 
+                   style-src 'self' 'unsafe-inline'; 
+                   img-src 'self' data:;
+                   connect-src 'self' https://localhost:8888;">
     <script src="https://cdn.tailwindcss.com"></script>
+  
     <script>
       tailwind.config = {
         theme: {
