@@ -13,14 +13,12 @@ logging.basicConfig(level=logging.DEBUG) # Or logging.INFO for less verbosity
 
 # Configure CORS
 # Allow requests from your frontend's development server and your future GitHub Pages site.
-# Replace 'https://YOUR_USERNAME.github.io' with your actual GitHub Pages URL.
-# 'null' is often needed for testing local file:///index.html
 # The port 5500 is based on your previous screenshots (VS Code Live Server default).
 origins = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
-    "https://3mmanu3lmois3s.github.io", # Replace with your actual GitHub pages URL
-    "null"
+    "https://3mmanu3lmois3s.github.io", # Your GitHub pages URL
+    "null" # For local file:///index.html testing
 ]
 CORS(app, resources={r"/productionplan": {"origins": origins}})
 
@@ -50,12 +48,13 @@ def production_plan_endpoint():
             app.logger.error("Calculation logic returned no valid plan.")
             return jsonify({"error": "Could not compute a valid production plan for the given load"}), 500
         
-        # Validate that sum of p in result_plan equals load and each p is multiple of 0.1
-        # This is a basic validation; more robust checks can be added.
+        # Optional: Basic validation of the result_plan structure or total power
         # total_generated_power = sum(item.get('p', 0) for item in result_plan)
-        # if not abs(total_generated_power - load) < 0.01: # Using a small tolerance for float comparison
-        #     app.logger.warning(f"Mismatch: Total generated power {total_generated_power} vs load {load}")
-            # Depending on strictness, you might return an error or just log it if the logic should guarantee this
+        # if not abs(total_generated_power - load) < 0.01: # Using a small tolerance
+        #     app.logger.warning(
+        #         f"Mismatch: Total generated power {total_generated_power} vs load {load}. "
+        #         "Logic needs to ensure exact match."
+        #     )
 
         app.logger.info(f"Responding with plan: {result_plan}")
         return jsonify(result_plan), 200
