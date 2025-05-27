@@ -81,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 processedPlants.forEach(p => {
                     if (p.type === "windturbine") {
-                        // La asignación ya se hizo, ahora la escalamos
                         p.assigned_power = roundToOneDecimalJS(p.assigned_power * scalingFactor);
                         currentTotalWindAdjusted += p.assigned_power;
                     }
@@ -96,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (remainingLoad < 0) remainingLoad = 0.0; 
         }
 
-        // Resetear assigned_power para térmicas antes de despacharlas (las eólicas ya tienen su valor)
         processedPlants.forEach(p => {
             if (p.type !== "windturbine") {
                 p.assigned_power = 0.0;
@@ -130,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 powerOutput = roundToOneDecimalJS(powerOutput);
                 
                 if (powerOutput > 0) {
-                    plantInProcessedList.assigned_power = powerOutput; // Asignar poder a esta planta térmica
+                    plantInProcessedList.assigned_power = powerOutput; 
                     currentThermalDispatchTotal += powerOutput;
                     currentThermalDispatchTotal = roundToOneDecimalJS(currentThermalDispatchTotal);
                 }
@@ -160,19 +158,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     let potentialIncrease = roundToOneDecimalJS(plant.pmax - currentAssigned);
                     let increaseBy = Math.min(discrepancy, potentialIncrease);
 
-                    // Si la planta está apagada (currentAssigned es 0) y tiene un pmin > 0
                     if (currentAssigned < plant.pmin && plant.pmin > 0) {
-                        // Si el aumento necesario para llegar a pmin es <= a la discrepancia total
-                        // Y si pmin es <= a la capacidad de aumento potencial de la planta
                         if ((plant.pmin - currentAssigned) <= discrepancy && plant.pmin <= potentialIncrease) {
-                            increaseBy = Math.min(discrepancy, plant.pmin - currentAssigned); // Intentar llegar al menos a pmin
+                           increaseBy = Math.min(discrepancy, plant.pmin - currentAssigned); 
                         } else {
-                           // No podemos encenderla a pmin con la discrepancia actual o capacidad
-                           // O si el aumento es menor que pmin y ya estaba encendida, no la tocamos si no llega a pmin
                            if ((currentAssigned + increaseBy) < plant.pmin && currentAssigned > 0) {
-                               increaseBy = 0; // No aumentar si no alcanza pmin y ya estaba encendida
+                               increaseBy = 0; 
                            } else if (currentAssigned === 0 && increaseBy < plant.pmin) {
-                               increaseBy = 0; // No encender si el aumento es menor que pmin
+                               increaseBy = 0; 
                            }
                         }
                     }
@@ -256,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (inputError) {
                 console.error('Error procesando input:', inputError);
-                displayError(inputError.message);
+                displayError(inputError.message); // Muestra el error de parseo del input
                 calculateBtn.disabled = false;
                 calculateBtn.innerHTML = originalButtonText;
                 return; 
@@ -274,30 +267,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) {
                     const errorData = await response.text(); 
                     console.error("Error de API:", response.status, errorData);
+                    // Lanzar un error para que sea capturado por el catch y se intente el fallback
                     throw new Error(`API Error (${response.status}): ${errorData || response.statusText}`);
                 }
 
                 const results = await response.json();
                 console.log("Resultados de API parseados:", results);
-                displayResults(results);
+                displayResults(results); // Muestra los resultados de la API
 
             } catch (apiError) {
                 console.warn('Llamada a API falló:', apiError.message);
-                // Verificar si es un error de red (servidor caído) para intentar el fallback
+                // Verificar si es un error de red (servidor caído o problema SSL) para intentar el fallback
                 if (apiError instanceof TypeError && 
-                    (apiError.message.toLowerCase().includes("failed to fetch") || apiError.message.toLowerCase().includes("ssl_protocol_error") || apiError.message.toLowerCase().includes("cert_authority_invalid"))) {
+                    (apiError.message.toLowerCase().includes("failed to fetch") || 
+                     apiError.message.toLowerCase().includes("ssl_protocol_error") || 
+                     apiError.message.toLowerCase().includes("cert_authority_invalid"))) {
                     
-                    resultsOutputDiv.innerHTML = '<p class="text-orange-500 font-semibold">API connection failed. Attempting calculation in browser...</p>';
+                    // Mostrar mensaje de intento de fallback
+                    resultsOutputDiv.innerHTML = '<p class="text-orange-500 font-semibold">API connection failed or SSL issue. Attempting calculation in browser...</p>';
                     console.log("Intentando cálculo de fallback en JS porque la API no está disponible o hay un error SSL.");
+                    
                     try {
+                        // Ejecutar el cálculo JS
                         const jsResults = calculatePlanInJS(fullPayload.load, fullPayload.fuels, fullPayload.powerplants);
                         console.log("Resultados del fallback en JS:", jsResults);
+                        
+                        // Mostrar los resultados del JS después de un breve retraso
                         setTimeout(() => {
+                           console.log("Dentro de setTimeout para displayResults con jsResults del fallback:", jsResults);
                            displayResults(jsResults);
                         }, 700); 
                     } catch (jsError) {
                         console.error('Error durante el cálculo de fallback en JS:', jsError);
-                        displayError(`API connection failed. JavaScript fallback also failed: ${jsError.message}`);
+                        displayError(`API connection/SSL error. JavaScript fallback also failed: ${jsError.message}`);
                     }
                 } else {
                     // Es un error de la API (ej. 400, 500), o un error diferente
