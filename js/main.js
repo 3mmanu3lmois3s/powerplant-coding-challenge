@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM completamente cargado. Iniciando main.js...");
 
-    // --- Elements for the main planner form ---
+    // --- Elementos para el formulario principal del planificador ---
     const plannerForm = document.getElementById('plannerForm');
     const loadInput = document.getElementById('load');
     const payloadJsonTextarea = document.getElementById('payloadJson');
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log("Elementos del formulario recuperados:", { plannerForm, loadInput, payloadJsonTextarea, resultsOutputDiv, calculateBtn });
 
-    // --- API URL Configuration ---
+    // --- Configuración de la URL de la API ---
     // PARA PRUEBAS CON GITHUB PAGES (HTTPS) Y API FLASK LOCAL (HTTPS):
     const API_URL = 'https://localhost:8888/productionplan';
     // Si pruebas index.html localmente (file:/// o http://127.0.0.1:5500) Y Flask está en HTTP:
@@ -19,8 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Helper function for rounding (JavaScript version) ---
     function roundToOneDecimalJS(value) {
-        // Math.round puede tener comportamientos inesperados con .5 en algunos motores JS
-        // Para asegurar un redondeo consistente a 0.1 (ej. 23.45 -> 23.5, 23.44 -> 23.4)
         return parseFloat(Number(value).toFixed(1));
     }
 
@@ -28,7 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculatePlanInJS(load, fuels, powerplantsData) {
         console.log("JS Fallback: Iniciando cálculo del plan de producción para carga:", load, "MWh");
         console.log("JS Fallback: Datos de combustibles:", fuels);
-        // console.log("JS Fallback: Datos de centrales:", powerplantsData); // Puede ser muy verboso
 
         let processedPlants = [];
         let totalWindProduction = 0.0;
@@ -49,13 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 pmin: plantData.pmin || 0,
                 pmax: plantData.pmax || 0,
                 cost_per_mwh: Infinity,
-                assigned_power: 0.0 // Poder asignado inicialmente
+                assigned_power: 0.0 
             };
 
             if (plant.type === "windturbine") {
                 plant.cost_per_mwh = 0.0;
                 let actualWindPower = roundToOneDecimalJS(plant.pmax * (windPercentage / 100.0));
-                plant.assigned_power = actualWindPower; // Asignación inicial para eólicas
+                plant.assigned_power = actualWindPower; 
                 totalWindProduction += actualWindPower;
             } else if (plant.type === "gasfired") {
                 if (plant.efficiency > 0) {
@@ -78,13 +75,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (remainingLoad < 0) {
             console.warn("JS Fallback: Producción eólica excede la carga. Ajustando producción eólica.");
-            if (totalWindProduction > 0.001) { // Evitar división por cero o por números muy pequeños
+            if (totalWindProduction > 0.001) { 
                 const scalingFactor = load / totalWindProduction;
                 let currentTotalWindAdjusted = 0.0;
                 
-                // Actualizar `assigned_power` en `processedPlants` directamente
                 processedPlants.forEach(p => {
                     if (p.type === "windturbine") {
+                        // La asignación ya se hizo, ahora la escalamos
                         p.assigned_power = roundToOneDecimalJS(p.assigned_power * scalingFactor);
                         currentTotalWindAdjusted += p.assigned_power;
                     }
@@ -92,15 +89,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 totalWindProduction = roundToOneDecimalJS(currentTotalWindAdjusted);
                 remainingLoad = roundToOneDecimalJS(load - totalWindProduction);
-            } else { // Si totalWindProduction es 0, y load es negativo, remainingLoad es load.
-                remainingLoad = roundToOneDecimalJS(load); // Si load es negativo, se hará 0 abajo.
+            } else { 
+                remainingLoad = roundToOneDecimalJS(load); 
             }
             console.log("JS Fallback: Producción eólica ajustada:", totalWindProduction, "Nueva carga restante:", remainingLoad);
-            if (remainingLoad < 0) remainingLoad = 0.0; // Asegurar que no sea negativa
+            if (remainingLoad < 0) remainingLoad = 0.0; 
         }
 
-        // Las plantas térmicas se despachan para la carga restante.
-        // Resetear assigned_power para térmicas antes de despacharlas.
+        // Resetear assigned_power para térmicas antes de despacharlas (las eólicas ya tienen su valor)
         processedPlants.forEach(p => {
             if (p.type !== "windturbine") {
                 p.assigned_power = 0.0;
@@ -117,27 +113,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         let currentThermalDispatchTotal = 0.0;
-        if (remainingLoad > 0.001) { // Solo despachar si hay carga restante significativa
+        if (remainingLoad > 0.001) { 
             for (const plantToDispatch of dispatchableThermalPlants) {
                 let loadStillNeeded = roundToOneDecimalJS(remainingLoad - currentThermalDispatchTotal);
-                if (loadStillNeeded < 0.01) break; // Si la carga restante es despreciable
+                if (loadStillNeeded < 0.01) break; 
 
-                // Encontrar esta planta en la lista principal `processedPlants` para actualizar su `assigned_power`
                 let plantInProcessedList = processedPlants.find(p => p.name === plantToDispatch.name);
                 let powerOutput = 0.0;
 
-                // Lógica de Pmin: Si la planta se enciende, debe ser al menos Pmin
-                // Si lo que se necesita es menos que Pmin (y Pmin > 0), no podemos usar esta planta para esa pequeña cantidad.
-                // A menos que sea la única opción o parte de un bloque mayor.
-                // Esta es la parte más compleja del "unit commitment".
-
-                // Intento de despacho:
-                if (loadStillNeeded >= plantToDispatch.pmin) { // Si podemos cubrir Pmin
+                if (loadStillNeeded >= plantToDispatch.pmin) { 
                     powerOutput = Math.min(loadStillNeeded, plantToDispatch.pmax);
-                } else if (plantToDispatch.pmin === 0 && loadStillNeeded > 0) { // Plantas como turbojet pueden ir de 0
+                } else if (plantToDispatch.pmin === 0 && loadStillNeeded > 0) { 
                     powerOutput = Math.min(loadStillNeeded, plantToDispatch.pmax);
                 }
-                // Si loadStillNeeded < plantToDispatch.pmin (y pmin > 0), esta planta no se despacha en este paso.
                 
                 powerOutput = roundToOneDecimalJS(powerOutput);
                 
@@ -149,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Consolidar el plan final con todas las plantas (eólicas + térmicas)
         let finalPlanMap = {};
         processedPlants.forEach(p => {
             finalPlanMap[p.name] = p.assigned_power;
@@ -161,26 +148,32 @@ document.addEventListener('DOMContentLoaded', () => {
         let discrepancy = roundToOneDecimalJS(load - currentTotalGeneration);
         console.log("JS Fallback: Discrepancia para ajuste final:", discrepancy);
 
-        // Lógica de ajuste final (simplificada)
         let adjustablePlantsForFinalPass = processedPlants
             .filter(p => p.type !== "windturbine")
-            .sort((a,b)=> a.cost_per_mwh - b.cost_per_mwh); // Ordenar por coste
+            .sort((a,b)=> a.cost_per_mwh - b.cost_per_mwh);
 
-        if (Math.abs(discrepancy) >= 0.1) { // Solo ajustar si la discrepancia es de al menos 0.1 MW
-            if (discrepancy > 0) { // Necesitamos aumentar producción
+        if (Math.abs(discrepancy) >= 0.1) { 
+            if (discrepancy > 0) { 
                 console.log("JS Fallback: Discrepancia > 0. Intentando aumentar producción.");
                 for (const plant of adjustablePlantsForFinalPass) { 
                     let currentAssigned = finalPlanMap[plant.name];
                     let potentialIncrease = roundToOneDecimalJS(plant.pmax - currentAssigned);
                     let increaseBy = Math.min(discrepancy, potentialIncrease);
 
-                    if (currentAssigned < plant.pmin && (currentAssigned + increaseBy) < plant.pmin && plant.pmin > 0) {
-                        // Si está apagada o por debajo de pmin, y el aumento no llega a pmin,
-                        // considerar si debemos forzar pmin.
-                        if (plant.pmin <= potentialIncrease && plant.pmin <= discrepancy) {
-                           increaseBy = plant.pmin - currentAssigned; // Aumentar para llegar a pmin
+                    // Si la planta está apagada (currentAssigned es 0) y tiene un pmin > 0
+                    if (currentAssigned < plant.pmin && plant.pmin > 0) {
+                        // Si el aumento necesario para llegar a pmin es <= a la discrepancia total
+                        // Y si pmin es <= a la capacidad de aumento potencial de la planta
+                        if ((plant.pmin - currentAssigned) <= discrepancy && plant.pmin <= potentialIncrease) {
+                            increaseBy = Math.min(discrepancy, plant.pmin - currentAssigned); // Intentar llegar al menos a pmin
                         } else {
-                           continue; 
+                           // No podemos encenderla a pmin con la discrepancia actual o capacidad
+                           // O si el aumento es menor que pmin y ya estaba encendida, no la tocamos si no llega a pmin
+                           if ((currentAssigned + increaseBy) < plant.pmin && currentAssigned > 0) {
+                               increaseBy = 0; // No aumentar si no alcanza pmin y ya estaba encendida
+                           } else if (currentAssigned === 0 && increaseBy < plant.pmin) {
+                               increaseBy = 0; // No encender si el aumento es menor que pmin
+                           }
                         }
                     }
                     increaseBy = roundToOneDecimalJS(increaseBy);
@@ -191,12 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (Math.abs(discrepancy) < 0.01) break;
                     }
                 }
-            } else { // Necesitamos reducir producción (discrepancy < 0)
+            } else { 
                 console.log("JS Fallback: Discrepancia < 0. Intentando reducir producción.");
                 let amountToReduce = Math.abs(discrepancy);
-                for (const plant of [...adjustablePlantsForFinalPass].reverse()) { // Más caras primero para reducir
+                for (const plant of [...adjustablePlantsForFinalPass].reverse()) { 
                     let currentAssigned = finalPlanMap[plant.name];
-                    if (currentAssigned < 0.01) continue; // Si ya está casi a cero
+                    if (currentAssigned < 0.01) continue; 
 
                     let canReduceByThisPlant = roundToOneDecimalJS(currentAssigned - plant.pmin);
                     if (plant.pmin === 0) { 
@@ -216,17 +209,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         let outputPlan = [];
-        // Usar powerplantsData para mantener el orden original en la salida
         powerplantsData.forEach(plantSpec => {
             const name = plantSpec.name;
             const power = finalPlanMap[name] !== undefined ? finalPlanMap[name] : 0.0;
-            outputPlan.push({ name: name, p: roundToOneDecimalJS(power) }); // Asegurar redondeo final
+            outputPlan.push({ name: name, p: roundToOneDecimalJS(power) }); 
         });
         
         const finalTotalGen = roundToOneDecimalJS(outputPlan.reduce((sum, p) => sum + p.p, 0));
         console.log("JS Fallback: Generación total final:", finalTotalGen, "MWh (Objetivo:", load, "MWh)");
 
-        if (Math.abs(finalTotalGen - load) > 0.01) { // Usar una tolerancia pequeña
+        if (Math.abs(finalTotalGen - load) > 0.01) { 
              console.warn("JS Fallback: ALERTA: No se pudo igualar la carga exactamente. Generado:", finalTotalGen, "Carga:", load);
         }
         return outputPlan;
@@ -282,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) {
                     const errorData = await response.text(); 
                     console.error("Error de API:", response.status, errorData);
-                    // Lanzar un error para que sea capturado por el catch y se intente el fallback
                     throw new Error(`API Error (${response.status}): ${errorData || response.statusText}`);
                 }
 
@@ -293,24 +284,23 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (apiError) {
                 console.warn('Llamada a API falló:', apiError.message);
                 // Verificar si es un error de red (servidor caído) para intentar el fallback
-                if (apiError instanceof TypeError && apiError.message.toLowerCase().includes("failed to fetch")) {
+                if (apiError instanceof TypeError && 
+                    (apiError.message.toLowerCase().includes("failed to fetch") || apiError.message.toLowerCase().includes("ssl_protocol_error") || apiError.message.toLowerCase().includes("cert_authority_invalid"))) {
+                    
                     resultsOutputDiv.innerHTML = '<p class="text-orange-500 font-semibold">API connection failed. Attempting calculation in browser...</p>';
-                    console.log("Intentando cálculo de fallback en JS porque la API no está disponible.");
+                    console.log("Intentando cálculo de fallback en JS porque la API no está disponible o hay un error SSL.");
                     try {
-                        // fullPayload ya está definido y disponible desde el try anterior
                         const jsResults = calculatePlanInJS(fullPayload.load, fullPayload.fuels, fullPayload.powerplants);
                         console.log("Resultados del fallback en JS:", jsResults);
-                        // Añadir un pequeño retraso para que el mensaje "Attempting calculation..." sea visible
-                        // y luego mostrar los resultados del JS.
                         setTimeout(() => {
                            displayResults(jsResults);
-                        }, 700); // 700 ms de retraso
+                        }, 700); 
                     } catch (jsError) {
                         console.error('Error durante el cálculo de fallback en JS:', jsError);
                         displayError(`API connection failed. JavaScript fallback also failed: ${jsError.message}`);
                     }
                 } else {
-                    // Es un error de la API (ej. 400, 500), o un error diferente a "Failed to fetch"
+                    // Es un error de la API (ej. 400, 500), o un error diferente
                     displayError(apiError.message);
                 }
             } finally {
