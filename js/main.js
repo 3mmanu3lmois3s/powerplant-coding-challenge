@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- API URL Configuration ---
     // PARA PRUEBAS CON GITHUB PAGES (HTTPS) Y API FLASK LOCAL (HTTPS):
-    const API_URL = 'https://localhost:8888/productionplan';
+    const API_URL = 'http://localhost:8888/productionplan';
     // Si pruebas index.html localmente (file:/// o http://127.0.0.1:5500) Y Flask está en HTTP:
     // const API_URL = 'http://127.0.0.1:8888/productionplan'; 
     console.log("API URL configurada para:", API_URL);
